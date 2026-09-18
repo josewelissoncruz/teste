@@ -1,0 +1,848 @@
+```Ruby
+
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Coletas e Entregas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Reports -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            body * { visibility: hidden; }
+            #printable-report, #printable-report * { visibility: visible; }
+            #printable-report { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 antialiased flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                    <i class="fa-solid fa-truck-ramp-box text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-900 text-base sm:text-lg leading-tight">LogiColeta Pro</h1>
+                    <p class="text-xs text-slate-500">Gestão Inteligente de Coletas & Entregas</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span id="user-status-badge" class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                    <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Sistema Ativo
+                </span>
+                <button onclick="openNewRequestModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm px-4 py-2 rounded-xl shadow-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span class="hidden sm:inline">Nova Solicitação</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container with Tabs -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col">
+        
+        <!-- Navigation Tabs Bar -->
+        <div class="flex overflow-x-auto space-x-2 border-b border-slate-200 pb-3 mb-6 no-scrollbar">
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn px-4 py-2.5 rounded-xl font-medium text-sm transition flex items-center space-x-2 bg-brand-600 text-white shadow-sm shrink-0">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </button>
+            <button onclick="switchTab('solicitacoes')" id="tab-btn-solicitacoes" class="tab-btn px-4 py-2.5 rounded-xl font-medium text-sm transition flex items-center space-x-2 bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 shrink-0">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <span>Solicitações</span>
+            </button>
+            <button onclick="switchTab('mapa')" id="tab-btn-mapa" class="tab-btn px-4 py-2.5 rounded-xl font-medium text-sm transition flex items-center space-x-2 bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 shrink-0">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Mapa & Rotas</span>
+            </button>
+            <button onclick="switchTab('relatorios')" id="tab-btn-relatorios" class="tab-btn px-4 py-2.5 rounded-xl font-medium text-sm transition flex items-center space-x-2 bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 shrink-0">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>Relatórios Analíticos</span>
+            </button>
+        </div>
+
+        
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content flex-1 space-y-6">
+            <!-- Stats Overview Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total de Coletas</p>
+                        <h3 id="stat-total" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
+                        <span class="text-xs text-emerald-600 font-medium flex items-center mt-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +12% este mês</span>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-box-archive"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Pendentes</p>
+                        <h3 id="stat-pending" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
+                        <span class="text-xs text-amber-600 font-medium flex items-center mt-1"><i class="fa-solid fa-clock mr-1"></i> Aguardando rota</span>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Em Trânsito</p>
+                        <h3 id="stat-transit" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+                        <span class="text-xs text-indigo-600 font-medium flex items-center mt-1"><i class="fa-solid fa-truck mr-1"></i> Em rota ativa</span>
+                    </div>
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Entregues / Concluídas</p>
+                        <h3 id="stat-completed" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                        <span class="text-xs text-emerald-600 font-medium flex items-center mt-1"><i class="fa-solid fa-circle-check mr-1"></i> 100% sucesso</span>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-check-double"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity & Quick Overview -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-bold text-slate-900 text-base">Últimas Solicitações Cadastradas</h2>
+                        <button onclick="switchTab('solicitacoes')" class="text-xs font-semibold text-brand-600 hover:text-brand-700">Ver todas &rarr;</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                                <tr>
+                                    <th class="px-4 py-3 rounded-l-lg">ID / Cliente</th>
+                                    <th class="px-4 py-3">Material</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3 rounded-r-lg">Data</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-requests-tbody" class="divide-y divide-slate-100">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-900 text-base mb-2">Ações Rápidas</h2>
+                        <p class="text-xs text-slate-500 mb-4">Atalhos para operações comuns no sistema.</p>
+                        <div class="space-y-3">
+                            <button onclick="openNewRequestModal()" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition flex items-center justify-between group">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 bg-brand-100 text-brand-700 rounded-lg flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition">
+                                        <i class="fa-solid fa-plus text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-800">Nova Coleta</p>
+                                        <p class="text-xs text-slate-500">Cadastrar nova demanda</p>
+                                    </div>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                            </button>
+                            <button onclick="switchTab('relatorios')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition flex items-center justify-between group">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 bg-purple-100 text-purple-700 rounded-lg flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition">
+                                        <i class="fa-solid fa-file-invoice text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-800">Gerar Relatórios</p>
+                                        <p class="text-xs text-slate-500">Exportar dados & dashboards</p>
+                                    </div>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                            </button>
+                            <button onclick="switchTab('mapa')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition flex items-center justify-between group">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition">
+                                        <i class="fa-solid fa-map text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-800">Visualizar Mapa</p>
+                                        <p class="text-xs text-slate-500">Acompanhar rotas ativas</p>
+                                    </div>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-3 rounded-xl">
+                        <div class="flex items-center space-x-2 text-xs text-slate-600">
+                            <i class="fa-solid fa-circle-info text-brand-600"></i>
+                            <span>Dica: Utilize a aba de Relatórios para análises consolidadas e impressão rápida.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: SOLICITAÇÕES -->
+        <section id="tab-solicitacoes" class="tab-content hidden flex-1 space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="font-bold text-slate-900 text-lg">Gerenciamento de Solicitações</h2>
+                        <p class="text-xs text-slate-500">Filtre, pesquise e gerencie o status das coletas e entregas.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-input" oninput="filterSolicitacoes()" placeholder="Pesquisar cliente ou material..." class="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 w-full sm:w-64">
+                        </div>
+                        <select id="status-filter" onchange="filterSolicitacoes()" class="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                            <option value="">Todos Status</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Em Trânsito">Em Trânsito</option>
+                            <option value="Entregue">Entregue</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                            <tr>
+                                <th class="px-4 py-3 rounded-l-lg">ID / Cliente</th>
+                                <th class="px-4 py-3">Tipo de Material</th>
+                                <th class="px-4 py-3">Volume</th>
+                                <th class="px-4 py-3">Origem & Destino</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3 text-right rounded-r-lg">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="solicitacoes-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: MAPA & ROTAS -->
+        <section id="tab-mapa" class="tab-content hidden flex-1 space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[600px]">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="font-bold text-slate-900 text-lg">Mapa de Rastreamento em Tempo Real</h2>
+                        <p class="text-xs text-slate-500">Visualização simulada de veículos em rota e pontos de coleta.</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            <i class="fa-solid fa-satellite-dish mr-1.5 animate-pulse"></i> GPS Ativo
+                        </span>
+                    </div>
+                </div>
+                <!-- Simulated Interactive Map Box -->
+                <div class="flex-1 bg-slate-900 rounded-2xl relative overflow-hidden flex items-center justify-center shadow-inner border border-slate-800">
+                    <!-- Map background graphics grid overlay -->
+                    <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px]"></div>
+                    
+                    <!-- Simulated Map Elements -->
+                    <div class="absolute inset-0 p-6 flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <div class="bg-slate-800/80 backdrop-blur border border-slate-700 p-3 rounded-xl text-white text-xs space-y-1 shadow-lg">
+                                <p class="font-bold text-emerald-400"><i class="fa-solid fa-circle-dot mr-1"></i> Frota Operacional</p>
+                                <p>Veículos em rota: <span class="font-bold">4 ativos</span></p>
+                                <p>Eficiência média: <span class="font-bold">94.2%</span></p>
+                            </div>
+                            <div class="bg-slate-800/80 backdrop-blur border border-slate-700 p-2 rounded-xl flex space-x-2">
+                                <button onclick="showToast('Centralizada no setor norte')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs transition">Setor Norte</button>
+                                <button onclick="showToast('Centralizada no setor sul')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs transition">Setor Sul</button>
+                            </div>
+                        </div>
+
+                        <!-- Simulated Route Nodes / Pins -->
+                        <div class="relative w-full h-full">
+                            <div class="absolute top-1/4 left-1/3 bg-emerald-500/20 border border-emerald-500 text-emerald-300 px-3 py-1.5 rounded-full text-xs flex items-center space-x-2 animate-bounce shadow-lg">
+                                <i class="fa-solid fa-truck"></i>
+                                <span>Veículo #102 - Em Trânsito</span>
+                            </div>
+                            <div class="absolute bottom-1/3 right-1/4 bg-blue-500/20 border border-blue-500 text-blue-300 px-3 py-1.5 rounded-full text-xs flex items-center space-x-2 shadow-lg">
+                                <i class="fa-solid fa-box"></i>
+                                <span>Ponto Coleta: Indústria Alfa</span>
+                            </div>
+                            <div class="absolute top-1/2 right-1/3 bg-amber-500/20 border border-amber-500 text-amber-300 px-3 py-1.5 rounded-full text-xs flex items-center space-x-2 shadow-lg">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Tráfego Intenso na Rota 4</span>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <p class="text-slate-400 text-xs bg-slate-800/80 py-2 px-4 rounded-xl inline-block backdrop-blur border border-slate-700">
+                                <i class="fa-solid fa-circle-info text-brand-500 mr-1"></i> Clique em qualquer marcador para ver detalhes detalhados do veículo ou ponto de parada.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: RELATÓRIOS ANALÍTICOS (Interactive Report Generator & Preview) -->
+        <section id="tab-relatorios" class="tab-content hidden flex-1 space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                <!-- Header and Filter Controls -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-bold text-slate-900 text-lg flex items-center">
+                            <i class="fa-solid fa-chart-line text-brand-600 mr-2"></i> Central de Relatórios Analíticos
+                        </h2>
+                        <p class="text-xs text-slate-500">Selecione os parâmetros e gere prévias visuais consolidadas em tempo real.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="window.print()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-xl transition flex items-center space-x-2">
+                            <i class="fa-solid fa-print"></i>
+                            <span>Imprimir Relatório</span>
+                        </button>
+                        <button onclick="simulateExportReport('PDF')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm rounded-xl shadow-sm transition flex items-center space-x-2">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>Exportar PDF</span>
+                        </button>
+                        <button onclick="simulateExportReport('Excel')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl shadow-sm transition flex items-center space-x-2">
+                            <i class="fa-solid fa-file-excel"></i>
+                            <span>Exportar Excel</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Report Filter Configuration Panel -->
+                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Tipo de Relatório</label>
+                        <select id="report-type" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500 font-medium">
+                            <option value="solicitacoes_periodo">Solicitações por Período</option>
+                            <option value="volume_materiais">Volume de Materiais Coletados</option>
+                            <option value="status_entregas">Status das Entregas (KPIs)</option>
+                            <option value="desempenho_rotas">Desempenho de Rotas & Frota</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Período</label>
+                        <select id="report-period" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                            <option value="7d">Últimos 7 dias</option>
+                            <option value="30d" selected>Últimos 30 dias</option>
+                            <option value="mes_atual">Mês Atual</option>
+                            <option value="ano_atual">Ano Atual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Filtrar por Status</label>
+                        <select id="report-status-filter" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                            <option value="todos">Todos os Status</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Em Trânsito">Em Trânsito</option>
+                            <option value="Entregue">Entregue</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="generateReportPreview()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Gerar Prévia do Relatório</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Printable & Visual Report Preview Dashboard Container -->
+                <div id="printable-report" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+                    <!-- Report Header Info -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-6 gap-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-brand-600 text-white rounded-xl flex items-center justify-center font-bold">
+                                <i class="fa-solid fa-file-invoice"></i>
+                            </div>
+                            <div>
+                                <h3 id="report-preview-title" class="text-xl font-bold text-slate-900">Relatório Consolidado de Solicitações por Período</h3>
+                                <p id="report-preview-subtitle" class="text-xs text-slate-500">Gerado em: <span id="report-gen-date">--/--/---- --:--</span> | Filtro: Últimos 30 dias</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-3 py-1 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full border border-brand-200">LogiColeta Analytics</span>
+                        </div>
+                    </div>
+
+                    <!-- Summary KPI Cards inside Report -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <p class="text-xs text-slate-500 uppercase font-semibold">Total Analisado</p>
+                            <p id="rep-kpi-total" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+                            <span class="text-xs text-emerald-600 font-medium">100% dos registros correspondentes</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <p class="text-xs text-slate-500 uppercase font-semibold">Volume Consolidado (kg/un)</p>
+                            <p id="rep-kpi-volume" class="text-2xl font-bold text-brand-600 mt-1">0 un</p>
+                            <span class="text-xs text-slate-500 font-medium">Média ponderada estável</span>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <p class="text-xs text-slate-500 uppercase font-semibold">Taxa de Conclusão</p>
+                            <p id="rep-kpi-success" class="text-2xl font-bold text-indigo-600 mt-1">94.8%</p>
+                            <span class="text-xs text-indigo-600 font-medium">Dentro da meta estipulada</span>
+                        </div>
+                    </div>
+
+                    <!-- Simulated Visual Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-bold text-slate-800 text-sm">Distribuição por Status</h4>
+                                <span class="text-xs text-slate-400">Gráfico Analítico</span>
+                            </div>
+                            <div class="relative h-64 flex items-center justify-center">
+                                <canvas id="reportDoughnutChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-bold text-slate-800 text-sm">Volume Coletado por Categoria</h4>
+                                <span class="text-xs text-slate-400">Tendência Semanal</span>
+                            </div>
+                            <div class="relative h-64 flex items-center justify-center">
+                                <canvas id="reportBarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consolidated Data Table Preview -->
+                    <div class="pt-2">
+                        <h4 class="font-bold text-slate-800 text-sm mb-3">Tabela Consolidada de Registros</h4>
+                        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
+                                    <tr>
+                                        <th class="px-4 py-3">ID</th>
+                                        <th class="px-4 py-3">Cliente / Parceiro</th>
+                                        <th class="px-4 py-3">Material</th>
+                                        <th class="px-4 py-3">Volume</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Data</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-table-tbody" class="divide-y divide-slate-100 bg-white">
+                                    <!-- Dynamic report items -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Report Footer Signatures -->
+                    <div class="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 gap-4">
+                        <p>LogiColeta Pro - Sistema de Rastreabilidade e Logística Reversa.</p>
+                        <div class="text-center sm:text-right">
+                            <p class="font-semibold text-slate-700">Responsável Operacional</p>
+                            <p class="mt-4 border-t border-slate-300 pt-1 w-48 mx-auto sm:mx-0">Assinatura Digital / Autorização</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- NEW REQUEST MODAL -->
+    <div id="new-request-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 transform transition-all">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                <h3 class="font-bold text-slate-900 text-lg flex items-center">
+                    <i class="fa-solid fa-box-open text-brand-600 mr-2"></i> Nova Solicitação de Coleta
+                </h3>
+                <button onclick="closeNewRequestModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="new-request-form" onsubmit="handleNewRequest(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nome do Cliente / Parceiro</label>
+                    <input type="text" id="req-cliente" required placeholder="Ex: Indústria Metalúrgica Sul" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Tipo de Material</label>
+                        <input type="text" id="req-material" required placeholder="Ex: Papelão Prensado, Plástico" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Volume (un / kg)</label>
+                        <input type="text" id="req-volume" required placeholder="Ex: 450 kg" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Endereço de Origem</label>
+                    <input type="text" id="req-origem" required placeholder="Ex: Rua das Indústrias, 500" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Status Inicial</label>
+                    <select id="req-status" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                        <option value="Pendente">Pendente</option>
+                        <option value="Em Trânsito">Em Trânsito</option>
+                        <option value="Entregue">Entregue</option>
+                    </select>
+                </div>
+                <div class="pt-4 flex items-center justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closeNewRequestModal()" class="px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm rounded-xl transition">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm rounded-xl shadow-sm transition">Salvar Solicitação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // Initial Mock Database State
+        let solicitacoesData = [
+            { id: "COL-1001", cliente: "Indústria Metalúrgica Sul", material: "Sucata de Alumínio", volume: "850 kg", origem: "Distrito Industrial I", status: "Em Trânsito", data: "2026-06-14" },
+            { id: "COL-1002", cliente: "EcoRecicla Comércio", material: "Papelão Ondulado", volume: "1.200 kg", origem: "Av. Central, 400", status: "Pendente", data: "2026-06-15" },
+            { id: "COL-1003", cliente: "TechSolutions Ltda", material: "Resíduos Eletrônicos", volume: "320 kg", origem: "Rua do Comércio, 12", status: "Entregue", data: "2026-06-12" },
+            { id: "COL-1004", cliente: "Supermercados Econômico", material: "Filme Plástico Stretch", volume: "540 kg", origem: "Rodovia BR-101", status: "Em Trânsito", data: "2026-06-16" },
+            { id: "COL-1005", cliente: "Construtora Horizonte", material: "Entulho Selecionado", volume: "3.500 kg", origem: "Canteiro Central Norte", status: "Pendente", data: "2026-06-17" },
+            { id: "COL-1006", cliente: "Cooperativa Verde Vida", material: "Garrafas PET", volume: "950 kg", origem: "Galpão Cooperativa", status: "Entregue", data: "2026-06-10" }
+        ];
+
+        let doughnutChartInstance = null;
+        let barChartInstance = null;
+
+        // On Load Initialization
+        window.onload = function() {
+            renderDashboardStats();
+            renderRecentRequests();
+            renderSolicitacoesTable();
+            generateReportPreview();
+        };
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+                btn.classList.add('bg-white', 'text-slate-600', 'hover:bg-slate-100', 'border', 'border-slate-200');
+            });
+
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-btn-' + tabId);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-white', 'text-slate-600', 'hover:bg-slate-100', 'border', 'border-slate-200');
+                activeBtn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+            }
+
+            if (tabId === 'relatorios') {
+                // Refresh chart rendering when switching to reports tab
+                setTimeout(() => { generateReportPreview(); }, 100);
+            }
+        }
+
+        // Render Dashboard Stats
+        function renderDashboardStats() {
+            const total = solicitacoesData.length;
+            const pending = solicitacoesData.filter(s => s.status === 'Pendente').length;
+            const transit = solicitacoesData.filter(s => s.status === 'Em Trânsito').length;
+            const completed = solicitacoesData.filter(s => s.status === 'Entregue').length;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-pending').innerText = pending;
+            document.getElementById('stat-transit').innerText = transit;
+            document.getElementById('stat-completed').innerText = completed;
+        }
+
+        // Render Recent Requests on Dashboard
+        function renderRecentRequests() {
+            const tbody = document.getElementById('recent-requests-tbody');
+            tbody.innerHTML = '';
+            solicitacoesData.slice(0, 4).forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-800">${item.id}<br><span class="text-xs font-normal text-slate-500">${item.cliente}</span></td>
+                    <td class="px-4 py-3 text-slate-600">${item.material}</td>
+                    <td class="px-4 py-3">${getStatusBadge(item.status)}</td>
+                    <td class="px-4 py-3 text-slate-500 text-xs">${item.data}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Solicitacoes Management Table
+        function renderSolicitacoesTable(filteredList = null) {
+            const tbody = document.getElementById('solicitacoes-table-body');
+            tbody.innerHTML = '';
+            const list = filteredList || solicitacoesData;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400 text-sm">Nenhuma solicitação encontrada.</td></tr>`;
+                return;
+            }
+
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-800">${item.id}<br><span class="text-xs font-normal text-slate-500">${item.cliente}</span></td>
+                    <td class="px-4 py-3 text-slate-700">${item.material}</td>
+                    <td class="px-4 py-3 text-slate-600 font-medium">${item.volume}</td>
+                    <td class="px-4 py-3 text-slate-500 text-xs">${item.origem}</td>
+                    <td class="px-4 py-3">${getStatusBadge(item.status)}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="advanceStatus('${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 rounded-lg text-xs font-medium transition mr-1" title="Avançar Status">
+                            <i class="fa-solid fa-forward"></i>
+                        </button>
+                        <button onclick="deleteSolicitacao('${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-lg text-xs font-medium transition" title="Excluir">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'Pendente') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Pendente</span>`;
+            if (status === 'Em Trânsito') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">Em Trânsito</span>`;
+            if (status === 'Entregue') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Entregue</span>`;
+            return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">${status}</span>`;
+        }
+
+        // Filter Solicitacoes
+        function filterSolicitacoes() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+
+            const filtered = solicitacoesData.filter(item => {
+                const matchQuery = item.cliente.toLowerCase().includes(query) || item.material.toLowerCase().includes(query) || item.id.toLowerCase().includes(query);
+                const matchStatus = statusFilter === '' || item.status === statusFilter;
+                return matchQuery && matchStatus;
+            });
+
+            renderSolicitacoesTable(filtered);
+        }
+
+        // Modal Controls
+        function openNewRequestModal() {
+            document.getElementById('new-request-modal').classList.remove('hidden');
+        }
+        function closeNewRequestModal() {
+            document.getElementById('new-request-modal').classList.add('hidden');
+            document.getElementById('new-request-form').reset();
+        }
+
+        // Handle New Request Submission
+        function handleNewRequest(e) {
+            e.preventDefault();
+            const cliente = document.getElementById('req-cliente').value;
+            const material = document.getElementById('req-material').value;
+            const volume = document.getElementById('req-volume').value;
+            const origem = document.getElementById('req-origem').value;
+            const status = document.getElementById('req-status').value;
+
+            const newId = "COL-" + (1000 + solicitacoesData.length + 1);
+            const today = new Date().toISOString().split('T')[0];
+
+            solicitacoesData.unshift({
+                id: newId,
+                cliente,
+                material,
+                volume,
+                origem,
+                status,
+                data: today
+            });
+
+            renderDashboardStats();
+            renderRecentRequests();
+            renderSolicitacoesTable();
+            generateReportPreview();
+            closeNewRequestModal();
+            showToast("Solicitação cadastrada com sucesso!");
+        }
+
+        // Advance Status
+        function advanceStatus(id) {
+            const item = solicitacoesData.find(s => s.id === id);
+            if (!item) return;
+            if (item.status === 'Pendente') item.status = 'Em Trânsito';
+            else if (item.status === 'Em Trânsito') item.status = 'Entregue';
+            else item.status = 'Pendente';
+
+            renderDashboardStats();
+            renderRecentRequests();
+            renderSolicitacoesTable();
+            generateReportPreview();
+            showToast(`Status de ${item.id} atualizado para ${item.status}`);
+        }
+
+        // Delete Solicitação
+        function deleteSolicitacao(id) {
+            solicitacoesData = solicitacoesData.filter(s => s.id !== id);
+            renderDashboardStats();
+            renderRecentRequests();
+            renderSolicitacoesTable();
+            generateReportPreview();
+            showToast("Solicitação removida.");
+        }
+
+        // REPORT GENERATOR ENGINE & PREVIEW DASHBOARD
+        function generateReportPreview() {
+            const type = document.getElementById('report-type').value;
+            const period = document.getElementById('report-period').value;
+            const statusFilter = document.getElementById('report-status-filter').value;
+
+            // Update Report Titles and Dates
+            const now = new Date();
+            document.getElementById('report-gen-date').innerText = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            
+            let titleText = "Relatório Consolidado";
+            if (type === 'solicitacoes_periodo') titleText = "Relatório de Solicitações por Período";
+            else if (type === 'volume_materiais') titleText = "Relatório de Volume de Materiais Coletados";
+            else if (type === 'status_entregas') titleText = "Relatório de Status e KPIs de Entregas";
+            else if (type === 'desempenho_rotas') titleText = "Relatório de Desempenho de Rotas & Frota";
+            
+            document.getElementById('report-preview-title').innerText = titleText;
+            document.getElementById('report-preview-subtitle').innerHTML = `Gerado em: <span>${now.toLocaleDateString('pt-BR')}</span> | Período: <span class="capitalize">${period}</span>`;
+
+            // Filter data for report preview
+            let reportList = solicitacoesData;
+            if (statusFilter !== 'todos') {
+                reportList = solicitacoesData.filter(s => s.status === statusFilter);
+            }
+
+            // Update KPI values inside Report
+            document.getElementById('rep-kpi-total').innerText = reportList.length;
+            document.getElementById('rep-kpi-volume').innerText = reportList.length * 450 + ' kg';
+            document.getElementById('rep-kpi-success').innerText = reportList.length > 0 ? ((reportList.filter(s => s.status === 'Entregue').length / reportList.length) * 100).toFixed(1) + '%' : '0%';
+
+            // Populate Report Table Body
+            const reportTbody = document.getElementById('report-table-tbody');
+            reportTbody.innerHTML = '';
+            if (reportList.length === 0) {
+                reportTbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400 text-xs">Nenhum registro para este filtro de relatório.</td></tr>`;
+            } else {
+                reportList.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="px-4 py-2.5 font-semibold text-slate-800">${item.id}</td>
+                        <td class="px-4 py-2.5 text-slate-700">${item.cliente}</td>
+                        <td class="px-4 py-2.5 text-slate-600">${item.material}</td>
+                        <td class="px-4 py-2.5 text-slate-600">${item.volume}</td>
+                        <td class="px-4 py-2.5">${getStatusBadge(item.status)}</td>
+                        <td class="px-4 py-2.5 text-slate-500 text-xs">${item.data}</td>
+                    `;
+                    reportTbody.appendChild(tr);
+                });
+            }
+
+            // Render Charts
+            renderReportCharts(reportList);
+            showToast("Prévia do relatório gerada com sucesso!");
+        }
+
+        // Render Chart.js Visual Mockups
+        function renderReportCharts(list) {
+            const pendingCount = list.filter(s => s.status === 'Pendente').length;
+            const transitCount = list.filter(s => s.status === 'Em Trânsito').length;
+            const deliveredCount = list.filter(s => s.status === 'Entregue').length;
+
+            // Doughnut Chart
+            const ctxDoughnut = document.getElementById('reportDoughnutChart').getContext('2d');
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+            doughnutChartInstance = new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pendente', 'Em Trânsito', 'Entregue'],
+                    datasets: [{
+                        data: [pendingCount || 1, transitCount || 1, deliveredCount || 1],
+                        backgroundColor: ['#f59e0b', '#6366f1', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+
+            // Bar Chart
+            const ctxBar = document.getElementById('reportBarChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+            barChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Papelão', 'Alumínio', 'Plástico', 'Eletrônicos', 'Outros'],
+                    datasets: [{
+                        label: 'Volume (kg)',
+                        data: [1200, 850, 540, 320, 950],
+                        backgroundColor: '#16a34a',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Simulate Exporting Report
+        function simulateExportReport(format) {
+            showToast(`Gerando arquivo ${format} com assinatura digital...`);
+            setTimeout(() => {
+                showToast(`Relatório exportado em ${format} com sucesso!`);
+            }, 1200);
+        }
+
+        // Toast Notification Helper
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-brand-500"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
